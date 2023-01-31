@@ -87,7 +87,7 @@ def buildpage(app, font, bg_color):
     frame_top.grid_columnconfigure(2, weight=20)
     frame_top.grid(sticky="NSEW")
     #BTNs Top Bar
-    btn_template = customtkinter.CTkLabel(frame_top, text="Select Template:", font=font)
+    btn_template = customtkinter.CTkLabel(frame_top, text="Select Template:", font=font, text_color="gray80")
     btn_template.grid(column=0, row=0, sticky="W")
 
     btn_template = customtkinter.CTkComboBox(frame_top, values=["LOOKS Archiv", "Archive Producing", "LOOKS-PROGRESS"], width=200, font=font, dropdown_font=font, variable="", command=listfields)

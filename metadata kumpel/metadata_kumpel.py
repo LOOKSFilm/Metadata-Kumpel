@@ -4,6 +4,7 @@ from ui.login_page import loginpage
 
 customtkinter.set_default_color_theme("dark-blue")
 app = customtkinter.CTk()
+app.configure(bg_color="gray10", fg_color="gray10")
 app.grid_columnconfigure(0, weight=1)
 app.grid_rowconfigure(0, weight=1)
 app.geometry(f"{400}x{275}+{500}+{300}")

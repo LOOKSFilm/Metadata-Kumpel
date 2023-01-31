@@ -30,7 +30,7 @@ def addSearchValue(fieldname, group, match, search):
         field["search"] = search
     return field
 
-def map(app, mapping_option, values, excel_file, testrun, update):
+def map(app, mapping_option, selectvalues, excel_file, testrun, update):
 
     def on_select():
         mapping_result_name = listbox_results.get(listbox_results.curselection())+"__"
@@ -131,7 +131,7 @@ def map(app, mapping_option, values, excel_file, testrun, update):
     #dpg.add_input_text(default_value="Searching Assets: ", parent="mapMsg", tag="searchingAsset")
     
     if mapping_option == "Collect Assets by Prefix":
-        prefix = values
+        prefix = selectvalues
         mapping_status.set(f"Searching Assets with Prefix: {prefix}")
         data["filters"].append(addSearchValue("CLIPNAME", "SEARCH_FILES", "BEGINS_WITH", prefix))
         data = json.dumps(data)
@@ -139,7 +139,7 @@ def map(app, mapping_option, values, excel_file, testrun, update):
             
     elif mapping_option == "Collect Assets via Mediaspace":
         mediaspaces = list()
-        for value in values:
+        for value in selectvalues:
             mediaspaces.append(value)
 
         clips = list()
@@ -151,7 +151,7 @@ def map(app, mapping_option, values, excel_file, testrun, update):
 
     elif mapping_option == "Collect Assets via Source":
         clips = list()
-        for value in values:
+        for value in selectvalues:
             mapping_status.set(f"Searching for Assets with Source: {value}")
             data = dict()
             data["combine"] = "MATCH_ALL"

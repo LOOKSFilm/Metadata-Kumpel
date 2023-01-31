@@ -6,7 +6,7 @@ from ui.mapping_page import mappage
 import os
 import sys
 
-VERSION = "v1.0123"
+VERSION = "v1.0123.1"
 
 def resource_path(relative_path):
     try:
@@ -51,6 +51,6 @@ def mainmenupage(app, font, bg_color):
     btn_map = customtkinter.CTkButton(frame_bot, text="Map Metadata", font=font, command=goto_mappage)
     btn_build.grid(column=0, row=0, sticky="NSEW", ipady=80, padx=20)
     btn_map.grid(column=1, row=0,  sticky="NSEW", ipady=80, padx=20)
-    label_version = customtkinter.CTkLabel(frame_main, text=VERSION, font=font)
+    label_version = customtkinter.CTkLabel(frame_main, text=VERSION, font=font, text_color="gray80")
     label_version.grid(column=0, row=2, padx=5, pady=5, sticky="E")
     

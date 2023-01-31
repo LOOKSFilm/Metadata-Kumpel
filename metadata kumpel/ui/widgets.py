@@ -7,7 +7,7 @@ class LoadingAnimation(customtkinter.CTkFrame):
         self.frames = frames
         self.delay = delay
         self.current_frame = 0
-        self.label = customtkinter.CTkLabel(self, text="", font=font, bg_color=bg_color)
+        self.label = customtkinter.CTkLabel(self, font=font, bg_color=bg_color, text_color="gray80")
         self.label.pack()
         self.update_frame()
 

@@ -89,7 +89,7 @@ def mappage(app, font, bg_color):
     # app.grid_columnconfigure(0, weight=1)
     # app.grid_rowconfigure(0, weight=1)
     #Mainframe
-    frame_mapping_page = customtkinter.CTkFrame(app, fg_color=bg_color)
+    frame_mapping_page = customtkinter.CTkFrame(app, fg_color=bg_color, bg_color=bg_color, border_color=bg_color)
     frame_mapping_page.rowconfigure(0, weight=1)
     frame_mapping_page.rowconfigure(1, weight=1)
     frame_mapping_page.rowconfigure(2, weight=100)
@@ -132,7 +132,7 @@ def mappage(app, font, bg_color):
     
 
     #Update Toggle
-    toggle_update = customtkinter.CTkSwitch(frame_mapping_page, font=font, text="Update Metadata")
+    toggle_update = customtkinter.CTkSwitch(frame_mapping_page, font=font, text="Update Metadata", text_color="gray80")
     toggle_update.grid(row=3)
 
     #Bar Bot

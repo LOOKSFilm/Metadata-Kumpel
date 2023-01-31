@@ -15,7 +15,7 @@ def loginpage(app, font, bg_color):
         loading_animation = LoadingAnimation(frame_status,frames,50,font=font,bg_color=bg_color)
         label_status.grid_forget()
         loading_animation.grid()
-        label_status.configure(text="")
+        #abel_status.configure(bg_color="gray80", fg_color="gray80")
         global username
         username = input_username.get()
         password = input_password.get()
@@ -47,9 +47,9 @@ def loginpage(app, font, bg_color):
     app.bind("<Return>", startlogin)
     btn_login.grid(sticky="N")
 
-    frame_status = customtkinter.CTkFrame(frame_login, bg_color="gray10")
+    frame_status = customtkinter.CTkFrame(frame_login, bg_color="gray10", fg_color=bg_color)
     frame_status.grid(sticky="N", pady=17)
-    label_status = customtkinter.CTkLabel(frame_status, text="", font=font, fg_color=bg_color)
+    label_status = customtkinter.CTkLabel(frame_status, text="", font=font, fg_color=bg_color, text_color="gray80")
     label_status.grid()
     print(btn_login.cget("fg_color"))
 
