@@ -6,7 +6,7 @@ from ui.mapping_page import mappage
 import os
 import sys
 
-VERSION = "v1.0123.1"
+VERSION = "v1.0223.0"
 
 def resource_path(relative_path):
     try:

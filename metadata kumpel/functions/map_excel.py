@@ -172,7 +172,7 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update):
             data = json.dumps(data)
             clips += FlowMetadata.searchAdvanced(data)
 
-    window_mapping.geometry(f"{800}x{600}")
+    window_mapping.geometry(f"{800}x{600}+{str(int(x_coord)+100)}+{str(int(y_coord)-100)}")
     window_mapping.overrideredirect(False)
     window_mapping.attributes("-topmost", False)
     frame_results = customtkinter.CTkFrame(window_mapping, fg_color="gray15", border_width=2, border_color="gray40")
@@ -190,15 +190,20 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update):
         messagebox.showerror("Empty Search", "\nNo Asset found\n\n\n")
     id_listitem = 0
     databuffer = dict()
+    skipped_assets = list()
     for i, clip in enumerate(clips):
         t = PrettyTable(['Field', 'Value'])
         t.align['Field'] = "l"
         t.align['Value'] = "l"             
         if "clip_id" in clip.keys():
             metadata = FlowMetadata.getClipData(clip["clip_id"])
-            asset_id = metadata.asset["asset_id"]
-            metadata_id = metadata.metadata["metadata_id"]
-            capture_id = metadata.capture["capture_id"]
+            try:
+                asset_id = metadata.asset["asset_id"]
+                metadata_id = metadata.metadata["metadata_id"]
+                capture_id = metadata.capture["capture_id"]
+            except TypeError:
+                skipped_assets.append(clip["clip_id"])
+                continue 
             if update == 1:
                 try:
                     id = metadata.asset["custom"]["field_248"]
@@ -244,11 +249,10 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update):
                     mappedData += t.get_string(border=1)
                     mappedData += f"\n\nTransmitted JSON\n-----------------\n"
                     mappedData += transmitted_json
-                    listbox_results.configure(fg="yellow")
                     listbox_results.insert(id_listitem, f"{id}")
+                    listbox_results.itemconfig(id_listitem, foreground="yellow")
                     databuffer[id_listitem] = mappedData
                     id_listitem += 1
-
                 else:
                     r = FlowMetadata.updateAsset(asset_id, data)
                     if r.status_code == 403:
@@ -272,8 +276,8 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update):
                     data = json.dumps(data)
                     r = FlowMetadata.updateMetadata(metadata_id, data)
                     if r == "OK":
-                        listbox_results.configure(fg="green")
                         listbox_results.insert(id_listitem, f"{id}")
+                        listbox_results.itemconfig(id_listitem, foreground="green")
                         databuffer[id_listitem] = mappedData
                         id_listitem += 1
                     errorcode = 200
@@ -284,8 +288,22 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update):
                     if errorcode == 403:
                         error = r["details"]
                         messagebox.showerror("Error 403", f"Renaming failed: {error}")
+                del mappings[id]
+                if len(mappings) == 0:
+                    break
             else:
                 pass
+    if len(mappings) > 0:
+        skipped_msg = "Assets aus der Excel wurden nicht gemappt.\nDas kann den Grund haben dass du für folgende ClipIDs keine lesberechtigung hast. Schick dieses File an Christoph, der schaut nach :)\n\n"
+        skipped_msg += f"Assets nicht gemappt:\n"
+        for id in mappings:
+            skipped_msg += f"{id}\n"
+        skipped_msg += "\nSkipped ClipIDs:\n"
+        for clipID in skipped_assets:
+            skipped_msg += f"{clipID}\n\n"
+        listbox_results.insert(id_listitem, "Skipped Assets")
+        listbox_results.itemconfig(id_listitem, foreground="red")
+        databuffer[id_listitem] = skipped_msg
     mapping_status.set(f"Mapping Complete")
     progress_bar.pack_forget()
     ui.mapping_page.btn_start_mapping.configure(state="active")
