@@ -78,8 +78,9 @@ def mappage(app, font, bg_color):
             values = input_prefix.get()
         else:
             values = None
-        update =toggle_update.get()
-        threading.Thread(target=map, args=[app, mapping_option, values, excel_file, testrun, update]).start()
+        rename = toggle_rename.get()
+        update = toggle_update.get()
+        threading.Thread(target=map, args=[app, mapping_option, values, excel_file, testrun, update, rename]).start()
 
 
 
@@ -130,10 +131,16 @@ def mappage(app, font, bg_color):
     scrollbar.pack(side="right", fill="y", padx=1, pady=5)
     input_prefix = customtkinter.CTkEntry(frame_mapping_page, placeholder_text="Insert Prefix", font=font, width=500)
     
-
+    #Toggle Frame
+    frame_toggle = customtkinter.CTkFrame(frame_mapping_page, fg_color=bg_color, bg_color=bg_color, border_color=bg_color)
+    frame_toggle.grid(row=3)
+    #Rename Toggle
+    toggle_rename = customtkinter.CTkSwitch(frame_toggle, font=font, text="Rename", text_color="gray80")
+    toggle_rename.grid(row=0, column=0, padx=50)
+    toggle_rename.select()
     #Update Toggle
-    toggle_update = customtkinter.CTkSwitch(frame_mapping_page, font=font, text="Update Metadata", text_color="gray80")
-    toggle_update.grid(row=3)
+    toggle_update = customtkinter.CTkSwitch(frame_toggle, font=font, text="Update Metadata", text_color="gray80")
+    toggle_update.grid(row=0, column=1)
 
     #Bar Bot
     frame_bot = customtkinter.CTkFrame(frame_mapping_page, fg_color=bg_color)
