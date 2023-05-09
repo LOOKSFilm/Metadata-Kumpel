@@ -10,7 +10,6 @@ import win32com.client as win32
 import xml.etree.ElementTree as et
 import customtkinter
 
-
 def build(app, selects, assignfields, is_imported, xmlfile):
     #rows = int(dpg.get_value(item="rows"))
     path = filedialog.asksaveasfilename(title="Save Excel to...",defaultextension=".xlsm", filetypes=[("Excel", ".xlsm")], initialfile="metadata_template")
@@ -55,9 +54,15 @@ def build(app, selects, assignfields, is_imported, xmlfile):
         if is_imported and not xmlfile == "":
             tree = et.parse(xmlfile)
             root = tree.findall("clip")
+            root += tree.findall("image")
             for row, clip in enumerate(root):
                 row = row + 2
-                clipname = clip.find("clipname").text
+                #print(clip)
+                try:
+                    clipname = clip.find("clipname").text
+                except:
+                    clipname = clip.find("file/backup/path").text.split("/")[-1].split(".")[0]
+                    print(clipname)
                 if not "003b Mapping Identifier" in selects:
                     worksheet1.cell(row=row, column=1).value = clipname
                 metadata = clip.find("custom")
@@ -96,34 +101,33 @@ def build(app, selects, assignfields, is_imported, xmlfile):
                             dv.add(worksheet1.cell(row=row, column=column))
                             worksheet1.cell(row=row, column=column).fill = PatternFill(fill_type="solid", start_color="00CCFFFF")
                             worksheet1.cell(row=row, column=column).border = Border(bottom=Side(border_style="medium", color="00808080"), top=Side(border_style="medium", color="00808080"), left=Side(border_style="medium", color="00808080"), right=Side(border_style="medium", color="00808080"))
-                        if fieldtype == "Qdate":
-                            dv = DataValidation(type="date")
-                            worksheet1.add_data_validation(dv)
-                            dv.add(worksheet1.cell(row=row, column=column))
-                            worksheet1.cell(row=row, column=column).fill = PatternFill(fill_type="solid", start_color="00CCFFFF")
-                            worksheet1.cell(row=row, column=column).border = Border(bottom=Side(border_style="medium", color="00808080"), top=Side(border_style="medium", color="00808080"), left=Side(border_style="medium", color="00808080"), right=Side(border_style="medium", color="00808080"))
-                        try:
-                            values = fielddata["allowed_values"]["values"]
-                            if not oldvalues == values:
-                                dvcount += 1
-                                for i, value in enumerate(values):
-                                    d1 = worksheet2.cell(row=i+1, column=dvcount)
-                                    d1.value = value["value"]
-                                startcell = "$"+worksheet2.cell(row=1, column=dvcount).column_letter+"$"+str(worksheet2.cell(row=1, column=dvcount).row)
-                                endcell = "$"+worksheet2.cell(row=len(values), column=dvcount).column_letter+"$"+str(worksheet2.cell(row=len(values), column=dvcount).row)
-                                if multiselect:
-                                    multiselectfiels.append(worksheet1.cell(row=row, column=column).column)
-                                #print(startcell, endcell)
-                                oldvalues = values
-                            dv = DataValidation(type="list", formula1="Data!"+startcell+":"+endcell, allow_blank=True)
-                            worksheet1.add_data_validation(dv)
-                            dv.add(worksheet1.cell(row=row, column=column))
-                            worksheet1.cell(row=row, column=column).fill = PatternFill(fill_type="solid", start_color="00CCFFFF")
-                            worksheet1.cell(row=row, column=column).border = Border(bottom=Side(border_style="medium", color="00808080"), top=Side(border_style="medium", color="00808080"), left=Side(border_style="medium", color="00808080"), right=Side(border_style="medium", color="00808080"))
-                                    
-                        except KeyError:
-                            pass
-                                    
+                            if fieldtype == "Qdate":
+                                dv = DataValidation(type="date")
+                                worksheet1.add_data_validation(dv)
+                                dv.add(worksheet1.cell(row=row, column=column))
+                                worksheet1.cell(row=row, column=column).fill = PatternFill(fill_type="solid", start_color="00CCFFFF")
+                                worksheet1.cell(row=row, column=column).border = Border(bottom=Side(border_style="medium", color="00808080"), top=Side(border_style="medium", color="00808080"), left=Side(border_style="medium", color="00808080"), right=Side(border_style="medium", color="00808080"))
+                            try:
+                                values = fielddata["allowed_values"]["values"]
+                                if not oldvalues == values:
+                                    dvcount += 1
+                                    for i, value in enumerate(values):
+                                        d1 = worksheet2.cell(row=i+1, column=dvcount)
+                                        d1.value = value["value"]
+                                    startcell = "$"+worksheet2.cell(row=1, column=dvcount).column_letter+"$"+str(worksheet2.cell(row=1, column=dvcount).row)
+                                    endcell = "$"+worksheet2.cell(row=len(values), column=dvcount).column_letter+"$"+str(worksheet2.cell(row=len(values), column=dvcount).row)
+                                    if multiselect:
+                                        multiselectfiels.append(worksheet1.cell(row=row, column=column).column)
+                                    #print(startcell, endcell)
+                                    oldvalues = values
+                                dv = DataValidation(type="list", formula1="Data!"+startcell+":"+endcell, allow_blank=True)
+                                worksheet1.add_data_validation(dv)
+                                dv.add(worksheet1.cell(row=row, column=column))
+                                worksheet1.cell(row=row, column=column).fill = PatternFill(fill_type="solid", start_color="00CCFFFF")
+                                worksheet1.cell(row=row, column=column).border = Border(bottom=Side(border_style="medium", color="00808080"), top=Side(border_style="medium", color="00808080"), left=Side(border_style="medium", color="00808080"), right=Side(border_style="medium", color="00808080"))
+                                        
+                            except KeyError:
+                                pass                             
         else:
             row = 2
             if fieldtype == "bool":

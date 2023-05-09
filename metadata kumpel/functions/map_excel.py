@@ -30,7 +30,7 @@ def addSearchValue(fieldname, group, match, search):
         field["search"] = search
     return field
 
-def map(app, mapping_option, selectvalues, excel_file, testrun, update):
+def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
 
     def on_select():
         mapping_result_name = listbox_results.get(listbox_results.curselection())+"__"
@@ -147,7 +147,6 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update):
             mapping_status.set(f"Searching for Assets on Mediaspace: {mediaspace}")
             mediaspaceclips = FlowMetadata.getMediaSpaceClips(mediaspace)
             clips += mediaspaceclips
-          
 
     elif mapping_option == "Collect Assets via Source":
         clips = list()
@@ -160,7 +159,7 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update):
             data["filters"].append(addSearchValue("field_55", "SEARCH_ASSETS", "EQUAL_TO", value))
             data = json.dumps(data)
             clips += FlowMetadata.searchAdvanced(data)
-    
+   
     else:
         clips = list()
         for i, mapping in enumerate(mappings):
@@ -183,9 +182,7 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update):
     listbox_results.grid_columnconfigure(0, weight=1)
     scrollbar = customtkinter.CTkScrollbar(frame_results)
     scrollbar.pack(side="right", fill="y", padx=1, pady=10)
-
-    
-
+    image = False
     if not clips:
         messagebox.showerror("Empty Search", "\nNo Asset found\n\n\n")
     id_listitem = 0
@@ -198,101 +195,111 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update):
         if "clip_id" in clip.keys():
             metadata = FlowMetadata.getClipData(clip["clip_id"])
             try:
-                asset_id = metadata.asset["asset_id"]
-                metadata_id = metadata.metadata["metadata_id"]
-                capture_id = metadata.capture["capture_id"]
+                asset_id = metadata["asset"]["asset_id"]
+                metadata_id = metadata["metadata"]["metadata_id"]
+                capture_id = metadata["capture"]["capture_id"]
             except TypeError:
                 skipped_assets.append(clip["clip_id"])
-                continue 
-            if update == 1:
-                try:
-                    id = metadata.asset["custom"]["field_248"]
-                    mapping_status.set(f"Updating Asset-Metadata: {id}")
-                except KeyError:
-                    continue
-            else:
-                id = metadata.display_name
-                mapping_status.set(f"Mapping Asset-Metadata: {id}")
-            if id in mappings:
-                try:
-                    identifier = mappings[id]["field_50"] 
-                except KeyError:
-                    messagebox.showerror("Key Error ID", f'Excel Error:\n\n{id}: "001 Identifier" missing\n\n')
-                try:
-                    name = mappings[id]["field_63"].replace(":", "").replace("\\", "-").replace("/", "-").replace(";","").replace(",", "").replace(".", "").replace("?","").replace("!","").replace("ß","sz").replace("ä","ae").replace("ü","ue").replace("ö","oe").replace("'","").replace('"',"")
-                except KeyError:
-                    messagebox.showerror("Key Error Title", f'Excel Error:\n\n{id}: "014 Title Original" missing\n\n')
-                clipname = f"{identifier}__{name}"
-                data = dict()
-                data["custom"] = mappings[id]
-                data["custom"]["field_248"] = id
+                continue
+        elif "image_id" in clip.keys():
+            image = True
+            metadata = FlowMetadata.getImageData(clip["image_id"])
+            asset_id = metadata["asset"]["asset_id"]
+        else:
+            continue
+        if update == 1:
+            try:
+                id = metadata["asset"]["custom"]["field_248"]
+                mapping_status.set(f"Comparing Asset:\n{id}")
+            except KeyError:
+                continue
+        else:
+            id = metadata["display_name"]
+            mapping_status.set(f"Comparing Asset:\n{id}")
+        if id in mappings:
+            try:
+                identifier = mappings[id]["field_50"] 
+            except KeyError:
+                messagebox.showerror("Key Error ID", f'Excel Error:\n\n{id}: "001 Identifier" missing\n\n')
+            try:
+                name = mappings[id]["field_63"].replace(":", "").replace("\\", "-").replace("/", "-").replace(";","").replace(",", "").replace(".", "").replace("?","").replace("!","").replace("ß","sz").replace("ä","ae").replace("ü","ue").replace("ö","oe").replace("'","").replace('"',"")
+            except KeyError:
+                messagebox.showerror("Key Error Title", f'Excel Error:\n\n{id}: "014 Title Original" missing\n\n')
+            clipname = f"{identifier}__{name}"
+            data = dict()
+            data["custom"] = mappings[id]
+            data["custom"]["field_248"] = id
+            try:
                 data["custom"]["field_231"] = clip["clip_id"]
-                data["custom"]["field_233"] = asset_id
-                data["custom"]["field_235"] = capture_id
-                data["custom"]["field_62"] = ui.login_page.username
-                data["custom"]["field_51"] = True
-                data["custom"]["field_60"] = str(datetime.now())
-                data["custom"]["field_127"] = metadata.asset["uuid"]
-                data = json.dumps(data, indent=4)
-                transmitted_json = data
-                if testrun:
-                    data = json.loads(data)
+            except KeyError:
+                data["custom"]["field_231"] = clip["image_id"]
+            data["custom"]["field_233"] = asset_id
+            data["custom"]["field_235"] = capture_id
+            data["custom"]["field_62"] = ui.login_page.username
+            data["custom"]["field_51"] = True
+            data["custom"]["field_60"] = str(datetime.now())
+            data["custom"]["field_127"] = metadata["asset"]["uuid"]
+            data = json.dumps(data, indent=4)
+            transmitted_json = data
+            if testrun:
+                data = json.loads(data)
+                if not image and rename:
                     mappedData = f"Renamed Clip: {clipname}\n"
-                    reversedFielddict = dict()
-                    for key in fieldsdict:
-                        val = fieldsdict[key]
-                        reversedFielddict[val] = key
-                    for key in data["custom"]:
-                        fieldname = reversedFielddict[key]
-                        fieldval = data["custom"][key]
-                        t.add_row([fieldname, fieldval])
-                    mappedData += t.get_string(border=1)
-                    mappedData += f"\n\nTransmitted JSON\n-----------------\n"
-                    mappedData += transmitted_json
-                    listbox_results.insert(id_listitem, f"{id}")
-                    listbox_results.itemconfig(id_listitem, foreground="yellow")
-                    databuffer[id_listitem] = mappedData
-                    id_listitem += 1
                 else:
-                    r = FlowMetadata.updateAsset(asset_id, data)
-                    if r.status_code == 403:
-                        messagebox.showerror("Permission Error", f"{ui.login_page.username} has no permission to write Metadata!")
-                    data = json.loads(data)
-                    mappedData = f"Renamed Clip: {clipname}\n"
-                    reversedFielddict = dict()
-                    for key in fieldsdict:
-                        val = fieldsdict[key]
-                        reversedFielddict[val] = key
-                    for key in data["custom"]:
-                        fieldname = reversedFielddict[key]
-                        fieldval = data["custom"][key]
-                        t.add_row([fieldname, fieldval])
-                    mappedData += t.get_string(border=1)
-                    mappedData += f"\nEditShare response: {r.text}\n\nTransmitted JSON\n-----------------\n"
-                    mappedData += transmitted_json
-                    
+                    mappedData = "Not renamed"
+                reversedFielddict = dict()
+                for key in fieldsdict:
+                    val = fieldsdict[key]
+                    reversedFielddict[val] = key
+                for key in data["custom"]:
+                    fieldname = reversedFielddict[key]
+                    fieldval = data["custom"][key]
+                    t.add_row([fieldname, fieldval])
+                mappedData += t.get_string(border=1)
+                mappedData += f"\n\nTransmitted JSON\n-----------------\n"
+                mappedData += transmitted_json
+                listbox_results.insert(id_listitem, f"{id}")
+                listbox_results.itemconfig(id_listitem, foreground="yellow")
+                databuffer[id_listitem] = mappedData
+                id_listitem += 1
+            else:
+                r = FlowMetadata.updateAsset(asset_id, data)
+                if r.status_code == 403:
+                    messagebox.showerror("Permission Error", f"{ui.login_page.username} has no permission to write Metadata!")
+                data = json.loads(data)
+                reversedFielddict = dict()
+                for key in fieldsdict:
+                    val = fieldsdict[key]
+                    reversedFielddict[val] = key
+                for key in data["custom"]:
+                    fieldname = reversedFielddict[key]
+                    fieldval = data["custom"][key]
+                    t.add_row([fieldname, fieldval])
+                if not image and rename:
                     data = dict()
                     data["clip_name"] = clipname
                     data = json.dumps(data)
-                    r = FlowMetadata.updateMetadata(metadata_id, data)
-                    if r == "OK":
-                        listbox_results.insert(id_listitem, f"{id}")
-                        listbox_results.itemconfig(id_listitem, foreground="green")
-                        databuffer[id_listitem] = mappedData
-                        id_listitem += 1
-                    errorcode = 200
-                    try:
-                        errorcode = r["code"]
-                    except:
-                        pass
-                    if errorcode == 403:
+                    res = FlowMetadata.updateMetadata(metadata_id, data)
+                    if res["code"] == 403:
                         error = r["details"]
                         messagebox.showerror("Error 403", f"Renaming failed: {error}")
-                del mappings[id]
-                if len(mappings) == 0:
-                    break
-            else:
-                pass
+                    mappedData = f"Renamed Clip: {clipname}\n"
+                else:
+                    mappedData = "Not renamed"
+                if r.status_code == 200:
+                    mappedData += t.get_string(border=1)
+                    mappedData += f"\nEditShare response: {r.text}\n\nTransmitted JSON\n-----------------\n"
+                    mappedData += transmitted_json
+                    listbox_results.insert(id_listitem, f"{id}")
+                    listbox_results.itemconfig(id_listitem, foreground="green")
+                    databuffer[id_listitem] = mappedData
+                    id_listitem += 1
+            del mappings[id]
+            if len(mappings) == 0:
+                break
+        else:
+            pass        
+        
     if len(mappings) > 0:
         skipped_msg = "Assets aus der Excel wurden nicht gemappt.\nDas kann den Grund haben dass du für folgende ClipIDs keine lesberechtigung hast. Schick dieses File an Christoph, der schaut nach :)\n\n"
         skipped_msg += f"Assets nicht gemappt:\n"
