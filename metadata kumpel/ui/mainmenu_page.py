@@ -6,7 +6,7 @@ from ui.mapping_page import mappage
 import os
 import sys
 
-VERSION = "v1.0223.0"
+#VERSION = "v1.5.23"
 
 def resource_path(relative_path):
     try:
@@ -16,7 +16,7 @@ def resource_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
-def mainmenupage(app, font, bg_color):
+def mainmenupage(app, font, bg_color, VERSION):
     def goto_buildpage():
         frame_main.grid_forget()
         buildpage(app, font, bg_color)

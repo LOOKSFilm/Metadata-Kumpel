@@ -8,7 +8,7 @@ from ui.widgets import LoadingAnimation
 
 
 
-def loginpage(app, font, bg_color):
+def loginpage(app, font, bg_color, VERSION):
     def login(event):
         #frames = [".", "..", "...", "...."]
         frames = [" ", " ", " ", " "]
@@ -25,7 +25,7 @@ def loginpage(app, font, bg_color):
         if connect == 200:
             app.unbind("<Return>")
             frame_login.grid_forget()
-            mainmenupage(app, font, bg_color)
+            mainmenupage(app, font, bg_color, VERSION)
         else:
             label_status.configure(text="Wrong Username or Password")
             loading_animation.grid_forget()
