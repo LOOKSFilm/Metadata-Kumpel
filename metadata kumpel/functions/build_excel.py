@@ -101,33 +101,33 @@ def build(app, selects, assignfields, is_imported, xmlfile):
                             dv.add(worksheet1.cell(row=row, column=column))
                             worksheet1.cell(row=row, column=column).fill = PatternFill(fill_type="solid", start_color="00CCFFFF")
                             worksheet1.cell(row=row, column=column).border = Border(bottom=Side(border_style="medium", color="00808080"), top=Side(border_style="medium", color="00808080"), left=Side(border_style="medium", color="00808080"), right=Side(border_style="medium", color="00808080"))
-                            if fieldtype == "Qdate":
-                                dv = DataValidation(type="date")
-                                worksheet1.add_data_validation(dv)
-                                dv.add(worksheet1.cell(row=row, column=column))
-                                worksheet1.cell(row=row, column=column).fill = PatternFill(fill_type="solid", start_color="00CCFFFF")
-                                worksheet1.cell(row=row, column=column).border = Border(bottom=Side(border_style="medium", color="00808080"), top=Side(border_style="medium", color="00808080"), left=Side(border_style="medium", color="00808080"), right=Side(border_style="medium", color="00808080"))
-                            try:
-                                values = fielddata["allowed_values"]["values"]
-                                if not oldvalues == values:
-                                    dvcount += 1
-                                    for i, value in enumerate(values):
-                                        d1 = worksheet2.cell(row=i+1, column=dvcount)
-                                        d1.value = value["value"]
-                                    startcell = "$"+worksheet2.cell(row=1, column=dvcount).column_letter+"$"+str(worksheet2.cell(row=1, column=dvcount).row)
-                                    endcell = "$"+worksheet2.cell(row=len(values), column=dvcount).column_letter+"$"+str(worksheet2.cell(row=len(values), column=dvcount).row)
-                                    if multiselect:
-                                        multiselectfiels.append(worksheet1.cell(row=row, column=column).column)
-                                    #print(startcell, endcell)
-                                    oldvalues = values
-                                dv = DataValidation(type="list", formula1="Data!"+startcell+":"+endcell, allow_blank=True)
-                                worksheet1.add_data_validation(dv)
-                                dv.add(worksheet1.cell(row=row, column=column))
-                                worksheet1.cell(row=row, column=column).fill = PatternFill(fill_type="solid", start_color="00CCFFFF")
-                                worksheet1.cell(row=row, column=column).border = Border(bottom=Side(border_style="medium", color="00808080"), top=Side(border_style="medium", color="00808080"), left=Side(border_style="medium", color="00808080"), right=Side(border_style="medium", color="00808080"))
-                                        
-                            except KeyError:
-                                pass                             
+                        if fieldtype == "Qdate":
+                            dv = DataValidation(type="date")
+                            worksheet1.add_data_validation(dv)
+                            dv.add(worksheet1.cell(row=row, column=column))
+                            worksheet1.cell(row=row, column=column).fill = PatternFill(fill_type="solid", start_color="00CCFFFF")
+                            worksheet1.cell(row=row, column=column).border = Border(bottom=Side(border_style="medium", color="00808080"), top=Side(border_style="medium", color="00808080"), left=Side(border_style="medium", color="00808080"), right=Side(border_style="medium", color="00808080"))
+                        try:
+                            values = fielddata["allowed_values"]["values"]
+                            if not oldvalues == values:
+                                dvcount += 1
+                                for i, value in enumerate(values):
+                                    d1 = worksheet2.cell(row=i+1, column=dvcount)
+                                    d1.value = value["value"]
+                                startcell = "$"+worksheet2.cell(row=1, column=dvcount).column_letter+"$"+str(worksheet2.cell(row=1, column=dvcount).row)
+                                endcell = "$"+worksheet2.cell(row=len(values), column=dvcount).column_letter+"$"+str(worksheet2.cell(row=len(values), column=dvcount).row)
+                                if multiselect:
+                                    multiselectfiels.append(worksheet1.cell(row=row, column=column).column)
+                                #print(startcell, endcell)
+                                oldvalues = values
+                            dv = DataValidation(type="list", formula1="Data!"+startcell+":"+endcell, allow_blank=True)
+                            worksheet1.add_data_validation(dv)
+                            dv.add(worksheet1.cell(row=row, column=column))
+                            worksheet1.cell(row=row, column=column).fill = PatternFill(fill_type="solid", start_color="00CCFFFF")
+                            worksheet1.cell(row=row, column=column).border = Border(bottom=Side(border_style="medium", color="00808080"), top=Side(border_style="medium", color="00808080"), left=Side(border_style="medium", color="00808080"), right=Side(border_style="medium", color="00808080"))
+                                    
+                        except KeyError:
+                            pass                             
         else:
             row = 2
             if fieldtype == "bool":
