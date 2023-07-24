@@ -53,7 +53,7 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
             with open(filepath, "w") as f:
                 f.write(databuffer[i])
 
-    fields = FlowMetadata.getCustomMetadataFields()
+    fields = FlowMetadata.getCustomMetadataFields().fields_data
     try:
         xlsx = openpyxl.load_workbook(excel_file, data_only=True, keep_vba=True)
     except PermissionError:
@@ -195,6 +195,12 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
         if "clip_id" in clip.keys():
             metadata = FlowMetadata.getClipData(clip["clip_id"])
             try:
+                if metadata["code"] == 403:
+                    print(clip["clip_id"])
+                    continue
+            except KeyError:
+                pass
+            try:
                 asset_id = metadata["asset"]["asset_id"]
                 metadata_id = metadata["metadata"]["metadata_id"]
                 capture_id = metadata["capture"]["capture_id"]
@@ -239,6 +245,18 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
             data["custom"]["field_51"] = True
             data["custom"]["field_60"] = str(datetime.now())
             data["custom"]["field_127"] = metadata["asset"]["uuid"]
+            try:
+                if ";" in str(data["custom"]["field_129"]):
+                    dates = str(data["custom"]["field_129"]).split(";")
+                    newdate = str()
+                    for date in dates:
+                        newdate += date.strip().split(" ")[0]+"; "
+                    data["custom"]["field_129"] = newdate
+                else:
+                    data["custom"]["field_129"] = str(data["custom"]["field_129"]).split(" ")[0]  
+            except:
+                pass          
+            #print(data)
             data = json.dumps(data, indent=4)
             transmitted_json = data
             if testrun:
@@ -280,9 +298,11 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
                     data["clip_name"] = clipname
                     data = json.dumps(data)
                     res = FlowMetadata.updateMetadata(metadata_id, data)
-                    if res["code"] == 403:
+                    if res != "OK":
                         error = r["details"]
                         messagebox.showerror("Error 403", f"Renaming failed: {error}")
+                    else:
+                        pass
                     mappedData = f"Renamed Clip: {clipname}\n"
                 else:
                     mappedData = "Not renamed"
