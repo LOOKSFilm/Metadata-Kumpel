@@ -14,6 +14,7 @@ from prettytable import PrettyTable
 import ui.login_page
 import ui.mapping_page
 
+## Function to create EditShare search data for advanced search requests
 def addSearchValue(fieldname, group, match, search):
     field = dict()
     field["field"] = dict()
@@ -30,8 +31,8 @@ def addSearchValue(fieldname, group, match, search):
         field["search"] = search
     return field
 
-def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
-
+def map(app, window_mapping, mapping_status, label_loading, progress_bar, frame_results, btn_cancel, excel_file, testrun, update, rename, frame_mapping_page, bg_color, VERSION, stop_event):
+## Create temp log files
     def on_select():
         mapping_result_name = listbox_results.get(listbox_results.curselection())+"__"
         with tempfile.NamedTemporaryFile(mode='w+', delete=False, prefix=mapping_result_name) as temp:
@@ -43,7 +44,8 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
             subprocess.run(["notepad.exe", temp.name])
     def start_on_select(event):
         threading.Thread(target=on_select).start()
-        
+
+## Export log files after Mapping        
     def export_logs():
         directory = customtkinter.filedialog.askdirectory()
         for i in range(listbox_results.size()):
@@ -53,7 +55,15 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
             with open(filepath, "w") as f:
                 f.write(databuffer[i])
 
-    fields = FlowMetadata.getCustomMetadataFields().fields_data
+## UI Back to Map Page   
+    def back():
+        window_mapping.grid_forget()
+        ui.mapping_page.mappage(app, font=font, bg_color=bg_color, VERSION=VERSION)
+    
+## Get EditShares Metadatafields
+    fieldsdict = FlowMetadata.getCustomMetadataFields().fields_dict
+
+## Open Excel file 
     try:
         xlsx = openpyxl.load_workbook(excel_file, data_only=True, keep_vba=True)
     except PermissionError:
@@ -64,10 +74,8 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
     rows = sheet.rows
     columns = sheet.columns
 
-    fieldsdict = dict()
-    for field in fields:
-        if re.match("[0-9][0-9][0-9]", field["name"][:3]):
-            fieldsdict[field["name"]] = field["db_key"]
+## Create dict of row 0 Metadatafields from Excel scheme: "column number": "field_000"
+## Columns that don't match any EditShare metadata fields are skipped
     mappingdict = dict()
     for ir, row in enumerate(rows):
         if ir == 0:
@@ -76,6 +84,14 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
                     mappingdict[ic] = fieldsdict[cell.value]
                 except KeyError:
                     pass
+    #print(json.dumps(mappingdict, indent=4))
+
+## UI Results with Temp log files
+    font = customtkinter.CTkFont(family="Hack NF", size=12, weight="bold")
+    listbox_results= tkinter.Listbox(frame_results, background="gray15", font=font, borderwidth=0, selectmode="single", highlightbackground="gray15", border=0, highlightcolor="gray15", fg="gray80", selectbackground='#1f538d', relief="flat")
+    listbox_results.bind("<<ListboxSelect>>", start_on_select)
+    listbox_results.pack(side="left", fill="both", expand=True, pady=10, padx=5, ipadx=10)
+    listbox_results.grid_columnconfigure(0, weight=1)
 
     sheet = xlsx.active
     rows = sheet.rows
@@ -83,23 +99,13 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
     rows = sheet.rows
     mappings = dict()
 
-    size, x_coord, y_coord = app.geometry().split("+")
-
-    font = customtkinter.CTkFont(family="Hack NF", size=12, weight="bold")
-    window_mapping = customtkinter.CTkToplevel()
-    window_mapping.title("Mapping Excel")
-    window_mapping.geometry(f"{400}x{70}+{str(int(x_coord)+100)}+{str(int(y_coord)+300)}")
-    window_mapping.overrideredirect(True)
-    window_mapping.attributes("-topmost", True)
-    mapping_status = tkinter.StringVar(value="Reading Excel")
-    label_loading = customtkinter.CTkLabel(window_mapping, textvariable=mapping_status , font=font)
-    label_loading.pack()
-    progress_bar = customtkinter.CTkProgressBar(window_mapping, mode="indeterminte", width=350)
-    progress_bar.pack()
-    progress_bar.start()
-
+## Mapping loop
     for ir, row in enumerate(rows):
         mapping = dict()
+        ## Break point when canceling mapping
+        if stop_event.is_set():
+            break
+## Create mappings dict; scheme: "Mapping ID": {"field_50": "data", ...}, "Mapping ID": {...}, ...
         for ic, cell in enumerate(row):
             if ir > 0:
                 if ic == 0:
@@ -117,7 +123,7 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
                                 listvalue.append(value.strip()) 
                             mappings[mapping_id][mappingdict[ic]] = listvalue
                         else:
-                           mappings[mapping_id][mappingdict[ic]] = None
+                            mappings[mapping_id][mappingdict[ic]] = None
                     else:
                         if type(cell.value) == str:
                             cell.value = cell.value.strip()
@@ -125,63 +131,29 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
                         mappings[mapping_id][mappingdict[ic]] = cell.value
                 except KeyError:
                     pass
+    #print(json.dumps(mappings, indent=4))
+
+## Mapping 
     data = dict()
-    data["combine"] = "MATCH_ALL"
+    data["combine"] = "MATCH_ANY"
     data["filters"] = list()
-    #dpg.add_input_text(default_value="Searching Assets: ", parent="mapMsg", tag="searchingAsset")
-    
-    if mapping_option == "Collect Assets by Prefix":
-        prefix = selectvalues
-        mapping_status.set(f"Searching Assets with Prefix: {prefix}")
-        data["filters"].append(addSearchValue("CLIPNAME", "SEARCH_FILES", "BEGINS_WITH", prefix))
+## When update selected search assets via 001 Identifier    
+    if update == 1:
+        clips = list()
+        for i, mapping in enumerate(mappings):
+            mapping_status.set(f"Searching Assets...")
+            data["filters"].append(addSearchValue("field_50", "SEARCH_ASSETS", "EQUAL_TO", mappings[mapping]["field_50"]))
         data = json.dumps(data)
         clips = FlowMetadata.searchAdvanced(data)
-            
-    elif mapping_option == "Collect Assets via Mediaspace":
-        mediaspaces = list()
-        for value in selectvalues:
-            mediaspaces.append(value)
-
-        clips = list()
-        for mediaspace in mediaspaces:
-            mapping_status.set(f"Searching for Assets on Mediaspace: {mediaspace}")
-            mediaspaceclips = FlowMetadata.getMediaSpaceClips(mediaspace)
-            clips += mediaspaceclips
-
-    elif mapping_option == "Collect Assets via Source":
-        clips = list()
-        for value in selectvalues:
-            mapping_status.set(f"Searching for Assets with Source: {value}")
-            data = dict()
-            data["combine"] = "MATCH_ALL"
-            data["filters"] = list()
-            print("searching "+value)
-            data["filters"].append(addSearchValue("field_55", "SEARCH_ASSETS", "EQUAL_TO", value))
-            data = json.dumps(data)
-            clips += FlowMetadata.searchAdvanced(data)
-   
+## If not search Clipname   
     else:
         clips = list()
         for i, mapping in enumerate(mappings):
-            mapping_status.set(f"Searching Asset with Clipname: {mapping}")
-            data = dict()
-            data["combine"] = "MATCH_ALL"
-            data["filters"] = list()
+            mapping_status.set(f"Searching Assets...")
             data["filters"].append(addSearchValue("CLIPNAME", "SEARCH_FILES", "EQUAL_TO", mapping))
-            data = json.dumps(data)
-            clips += FlowMetadata.searchAdvanced(data)
-
-    window_mapping.geometry(f"{800}x{600}+{str(int(x_coord)+100)}+{str(int(y_coord)-100)}")
-    window_mapping.overrideredirect(False)
-    window_mapping.attributes("-topmost", False)
-    frame_results = customtkinter.CTkFrame(window_mapping, fg_color="gray15", border_width=2, border_color="gray40")
-    frame_results.pack(fill="both", expand=True, padx=10, pady=10)
-    listbox_results= tkinter.Listbox(frame_results, background="gray15", font=font, borderwidth=0, selectmode="single", highlightbackground="gray15", border=0, highlightcolor="gray15", fg="gray80", selectbackground='#1f538d', relief="flat")
-    listbox_results.bind("<<ListboxSelect>>", start_on_select)
-    listbox_results.pack(side="left", fill="both", expand=True, pady=10, padx=5, ipadx=10)
-    listbox_results.grid_columnconfigure(0, weight=1)
-    scrollbar = customtkinter.CTkScrollbar(frame_results)
-    scrollbar.pack(side="right", fill="y", padx=1, pady=10)
+        data = json.dumps(data)
+        clips = FlowMetadata.searchAdvanced(data)
+    
     image = False
     if not clips:
         messagebox.showerror("Empty Search", "\nNo Asset found\n\n\n")
@@ -189,6 +161,8 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
     databuffer = dict()
     skipped_assets = list()
     for i, clip in enumerate(clips):
+        if stop_event.is_set():
+            break
         t = PrettyTable(['Field', 'Value'])
         t.align['Field'] = "l"
         t.align['Value'] = "l"             
@@ -245,6 +219,9 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
             data["custom"]["field_51"] = True
             data["custom"]["field_60"] = str(datetime.now())
             data["custom"]["field_127"] = metadata["asset"]["uuid"]
+            if type(data["custom"]['field_49']) == list:
+                seperator = "; "
+                data["custom"]['field_49'] = seperator.join(data["custom"]['field_49'])
             try:
                 if ";" in str(data["custom"]["field_129"]):
                     dates = str(data["custom"]["field_129"]).split(";")
@@ -252,11 +229,13 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
                     for date in dates:
                         newdate += date.strip().split(" ")[0]+"; "
                     data["custom"]["field_129"] = newdate
+                elif data["custom"]["field_129"] == None:
+                    pass
                 else:
                     data["custom"]["field_129"] = str(data["custom"]["field_129"]).split(" ")[0]  
             except:
                 pass          
-            #print(data)
+            data["custom"]['field_49'] = str(data["custom"]["field_48"])
             data = json.dumps(data, indent=4)
             transmitted_json = data
             if testrun:
@@ -333,9 +312,6 @@ def map(app, mapping_option, selectvalues, excel_file, testrun, update, rename):
         databuffer[id_listitem] = skipped_msg
     mapping_status.set(f"Mapping Complete")
     progress_bar.pack_forget()
-    ui.mapping_page.btn_start_mapping.configure(state="active")
-    ui.mapping_page.btn_testrun.configure(state="active")
-    btn_close = customtkinter.CTkButton(window_mapping, text="Close", font=font, command=lambda:window_mapping.destroy())
+    btn_cancel.configure(text="Close", command=back)
     btn_export_logs = customtkinter.CTkButton(window_mapping, text="Export Log Files", font=font, command=export_logs)
-    btn_close.pack(side="left", padx=10, pady=10)
     btn_export_logs.pack(side="right", padx=10, pady=10)
