@@ -194,32 +194,53 @@ def build(app, selects, assignfields, is_imported, xmlfile):
             xlmodule = ss.VBProject.VBComponents("Tabelle1")
             xlmodule.Name = 'multiselect'
             code = f'''Private Sub Worksheet_Change(ByVal Target As Range)
-Dim Oldvalue As String
-Dim Newvalue As String
-Application.EnableEvents = True
-On Error GoTo Exitsub
-{codefields}
-  If Target.SpecialCells(xlCellTypeAllValidation) Is Nothing Then
-    GoTo Exitsub
-  Else: If Target.Value = "" Then GoTo Exitsub Else
-    Application.EnableEvents = False
-    Newvalue = Target.Value
-    Application.Undo
-    Oldvalue = Target.Value
-      If Oldvalue = "" Then
-        Target.Value = Newvalue
-      Else
-        If InStr(1, Oldvalue, Newvalue) = 0 Then
-            Target.Value = Oldvalue & "; " & Newvalue
-      Else:
-        Target.Value = Oldvalue
-      End If
+    Dim Oldvalue As String
+    Dim Newvalue As String
+    Application.EnableEvents = True
+    On Error GoTo Exitsub
+    {codefields}
+        If Target.SpecialCells(xlCellTypeAllValidation) Is Nothing Then
+            GoTo Exitsub
+        Else
+            If Target.Value = "" Then
+                GoTo Exitsub
+            Else
+                Application.EnableEvents = False
+                Newvalue = Target.Value
+                Application.Undo
+                Oldvalue = Target.Value
+                If Oldvalue = "" Then
+                    Target.Value = Newvalue
+                Else
+                    If InStr(1, Oldvalue, Newvalue) = 0 Then
+                        Target.Value = Oldvalue & "; " & Newvalue
+                    Else
+                        ' Check if the Newvalue already exists in the list (deactivate)
+                        Dim valuesArray() As String
+                        valuesArray = Split(Oldvalue, "; ")
+                        Dim modifiedValue As String
+                        modifiedValue = ""
+                        Dim isFirst As Boolean
+                        isFirst = True
+                        Dim i As Long
+                        For i = LBound(valuesArray) To UBound(valuesArray)
+                            If valuesArray(i) <> Newvalue Then
+                                If Not isFirst Then
+                                    modifiedValue = modifiedValue & "; "
+                                End If
+                                modifiedValue = modifiedValue & valuesArray(i)
+                                isFirst = False
+                            End If
+                        Next i
+                        Target.Value = modifiedValue
+                    End If
+                End If
+            End If
+        End If
     End If
-  End If
-End If
-Application.EnableEvents = True
+    Application.EnableEvents = True
 Exitsub:
-Application.EnableEvents = True
+    Application.EnableEvents = True
 End Sub
 '''
             xlmodule.CodeModule.AddFromString(code)
