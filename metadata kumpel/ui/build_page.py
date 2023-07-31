@@ -7,10 +7,10 @@ import ui.mainmenu_page
 from functions.build_excel import build
 
 
-def buildpage(app, font, bg_color):
+def buildpage(app, font, bg_color, VERSION):
     def back():
         frame_main.grid_forget()
-        ui.mainmenu_page.mainmenupage(app, font, bg_color)
+        ui.mainmenu_page.mainmenupage(app, font, bg_color, VERSION)
     
     def listfields(selection):
         global xmlfile

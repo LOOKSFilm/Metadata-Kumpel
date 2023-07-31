@@ -19,9 +19,9 @@ def loginpage(app, font, bg_color, VERSION):
         global username
         username = input_username.get()
         password = input_password.get()
-        
+        ip = input_ip.get()
         #connect = EsAuth.login("192.168.0.221", username, password)
-        connect = EsAuth.login("192.168.0.220", username, password)
+        connect = EsAuth.login(ip, username, password)
         if connect == 200:
             app.unbind("<Return>")
             frame_login.grid_forget()
@@ -44,6 +44,9 @@ def loginpage(app, font, bg_color, VERSION):
     input_username.grid()
     input_password = customtkinter.CTkEntry(frame_login, placeholder_text="Password", show="*", justify="center", font=font)
     input_password.grid(sticky="N")
+    input_ip = customtkinter.CTkEntry(frame_login, placeholder_text="192.168.0.220", justify="center", font=font)
+    input_ip.insert(0, "192.168.0.220")
+    input_ip.grid(sticky="N")
     btn_login = customtkinter.CTkButton(frame_login, text="Login", command=startlogin, font=font)
     app.bind("<Return>", startlogin)
     btn_login.grid(sticky="N")

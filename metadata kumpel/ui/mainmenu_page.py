@@ -19,10 +19,10 @@ def resource_path(relative_path):
 def mainmenupage(app, font, bg_color, VERSION):
     def goto_buildpage():
         frame_main.grid_forget()
-        buildpage(app, font, bg_color)
+        buildpage(app, font, bg_color, VERSION)
     def goto_mappage():
         frame_main.grid_forget()
-        mappage(app, font, bg_color)
+        mappage(app, font, bg_color, VERSION)
 
     app.geometry(f"{800}x{600}")
     app.resizable(False,False)
