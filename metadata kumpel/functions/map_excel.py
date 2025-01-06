@@ -125,6 +125,7 @@ def map(app, window_mapping, mapping_status, label_loading, progress_bar, frame_
 ## Mapping loop
     try:
         for ir, row in enumerate(rows):
+            mapping_status.set(f"Reading Excel... ({ir}/{sheet.max_row})")
             mapping = dict()
             ## Break point when canceling mapping
             if stop_event.is_set():
@@ -272,6 +273,7 @@ def map(app, window_mapping, mapping_status, label_loading, progress_bar, frame_
                     pass          
                 data["custom"]['field_49'] = str(data["custom"]["field_48"])
                 data = json.dumps(data, indent=4)
+                #print(data)
                 transmitted_json = data
                 if testrun:
                     data = json.loads(data)
@@ -297,9 +299,6 @@ def map(app, window_mapping, mapping_status, label_loading, progress_bar, frame_
                     mapped_assets.append(id)
                 else:
                     r = FlowMetadata.updateAsset(asset_id, data)
-                    if r.status_code == 403:
-                        messagebox.showerror("Permission Error", f"{ui.login_page.username} has no permission to write Metadata!")
-                        break
                     data = json.loads(data)
                     reversedFielddict = dict()
                     for key in fieldsdict:
@@ -323,9 +322,16 @@ def map(app, window_mapping, mapping_status, label_loading, progress_bar, frame_
                         mappedData = f"Renamed Clip: {clipname}\n"
                     else:
                         mappedData = "Not renamed"
-                    if r.status_code == 200:
+                    if r != "OK":
+                        if r["code"] == 403:
+                            messagebox.showerror("Permission Error", f"{ui.login_page.username} has no permission to write Metadata!")
+                            break
+                        if r["code"] == 400:
+                            messagebox.showerror("JSON Error", f"Wrong JSON Format!")
+                            break
+                    else:
                         mappedData += t.get_string(border=1)
-                        mappedData += f"\nEditShare response: {r.text}\n\nTransmitted JSON\n-----------------\n"
+                        mappedData += f"\nEditShare response: {r}\n\nTransmitted JSON\n-----------------\n"
                         mappedData += transmitted_json
                         listbox_results.insert(id_listitem, f"{id}")
                         listbox_results.itemconfig(id_listitem, foreground="green")
@@ -335,7 +341,8 @@ def map(app, window_mapping, mapping_status, label_loading, progress_bar, frame_
                     
     except Exception as e:
         error_msg = traceback.format_exc()
-    print(mapped_assets)
+        print(error_msg)
+    #print(mapped_assets)
     for asset in mappings.keys():
         if asset not in mapped_assets:
             skipped_assets.append(asset)
