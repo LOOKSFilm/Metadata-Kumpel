@@ -1,4 +1,4 @@
-from EditShareAPI import FlowMetadata
+from EditShareAPI import FlowMetadata, FlowSearch
 import openpyxl
 import re
 import customtkinter
@@ -41,17 +41,16 @@ def searchAssets(update, mappings, mapping_status):
         clips = list()
         for i, mapping in enumerate(mappings):
             mapping_status.set(f"Searching Assets...")
-            data["filters"].append(addSearchValue("field_50", "SEARCH_ASSETS", "EQUAL_TO", mappings[mapping]["field_50"]))
-        data = json.dumps(data)
-        clips = FlowMetadata.searchAdvanced(data)
+            filters = [FlowSearch.createFilter("field_50", FlowSearch.GROUP_ASSETS, FlowSearch.MATCH_IS, mappings[mapping]["field_50"])]
+        clips = FlowSearch.searchAdvanced(combine=FlowSearch.COMBINE_ALL, filters=filters)
 ## If not search Clipname   
     else:
         clips = list()
         for i, mapping in enumerate(mappings):
             mapping_status.set(f"Searching Assets...")
-            data["filters"].append(addSearchValue("CLIPNAME", "SEARCH_FILES", "EQUAL_TO", mapping))
-        data = json.dumps(data)
-        clips = FlowMetadata.searchAdvanced(data)
+            filters = [FlowSearch.createFilter("CLIPNAME", FlowSearch.GROUP_FILES, FlowSearch.MATCH_IS, mapping)]
+            #data["filters"].append(addSearchValue("CLIPNAME", "SEARCH_FILES", "EQUAL_TO", mapping))
+        clips = FlowSearch.searchAdvanced(combine=FlowSearch.COMBINE_ALL, filters=filters)
     return clips
 
 def map(app, window_mapping, mapping_status, label_loading, progress_bar, frame_results, btn_cancel, excel_file, testrun, update, rename, frame_mapping_page, bg_color, VERSION, stop_event):
@@ -140,7 +139,15 @@ def map(app, window_mapping, mapping_status, label_loading, progress_bar, frame_
                         mappings[mapping_id] = dict()
                     try:
                         field = FlowMetadata.getCustomMetadataField(mappingdict[ic])
-                        if field["multi_select"]:
+                        if field["type"] == "bool":
+                            print(cell.value)
+                            if cell.value == True:
+                                mappings[mapping_id][mappingdict[ic]] = bool(cell.value)
+                            else:
+                                mappings[mapping_id][mappingdict[ic]] = bool(cell.value)
+                        elif cell.value == None:
+                            continue
+                        elif field["multi_select"]:
                             if type(cell.value) == str:
                                 values = cell.value.split(";")
                                 listvalue = list()
@@ -156,7 +163,7 @@ def map(app, window_mapping, mapping_status, label_loading, progress_bar, frame_
                             mappings[mapping_id][mappingdict[ic]] = cell.value
                     except KeyError:
                         pass
-        print(mappings.keys())
+        print(json.dumps(mappings, indent=4))
 
     ## Mapping 
         data = dict()
@@ -167,20 +174,19 @@ def map(app, window_mapping, mapping_status, label_loading, progress_bar, frame_
             clips = list()
             for i, mapping in enumerate(mappings):
                 mapping_status.set(f"Searching Assets...")
-                data["filters"].append(addSearchValue("field_50", "SEARCH_ASSETS", "EQUAL_TO", mappings[mapping]["field_50"]))
+                filters = FlowSearch.createFilter("field_50", FlowSearch.GROUP_ASSETS, FlowSearch.MATCH_IS, mappings[mapping]["field_50"])
                 # del mappings[id]
                 # if len(mappings) == 0:
                 #     break
-            data = json.dumps(data)
-            clips = FlowMetadata.searchAdvanced(data)
+            clips = FlowSearch.searchAdvanced(combine=FlowSearch.COMBINE_ANY, filters=filters)
     ## If not search Clipname   
         else:
             clips = list()
+            filters = list()
             for i, mapping in enumerate(mappings):
                 mapping_status.set(f"Searching Assets...")
-                data["filters"].append(addSearchValue("CLIPNAME", "SEARCH_FILES", "EQUAL_TO", mapping))
-            data = json.dumps(data)
-            clips = FlowMetadata.searchAdvanced(data)
+                filters.append(FlowSearch.createFilter("CLIPNAME", FlowSearch.GROUP_FILES, FlowSearch.MATCH_IS, mapping))
+            clips = FlowSearch.searchAdvanced(combine=FlowSearch.COMBINE_ANY, filters=filters)
         
         image = False
         if not clips:
@@ -272,11 +278,9 @@ def map(app, window_mapping, mapping_status, label_loading, progress_bar, frame_
                 except:
                     pass          
                 data["custom"]['field_49'] = str(data["custom"]["field_48"])
-                data = json.dumps(data, indent=4)
                 #print(data)
                 transmitted_json = data
                 if testrun:
-                    data = json.loads(data)
                     if not image and rename:
                         mappedData = f"Renamed Clip: {clipname}\n"
                     else:
@@ -291,15 +295,15 @@ def map(app, window_mapping, mapping_status, label_loading, progress_bar, frame_
                         t.add_row([fieldname, fieldval])
                     mappedData += t.get_string(border=1)
                     mappedData += f"\n\nTransmitted JSON\n-----------------\n"
-                    mappedData += transmitted_json
+                    mappedData += json.dumps(transmitted_json, indent=4)
                     listbox_results.insert(id_listitem, f"{id}")
                     listbox_results.itemconfig(id_listitem, foreground="yellow")
                     databuffer[id_listitem] = mappedData
                     id_listitem += 1
                     mapped_assets.append(id)
                 else:
-                    r = FlowMetadata.updateAsset(asset_id, data)
-                    data = json.loads(data)
+                    print(json.dumps(data, indent=4))
+                    r = FlowMetadata.updateAsset(asset_id, json.dumps(data))
                     reversedFielddict = dict()
                     for key in fieldsdict:
                         val = fieldsdict[key]
@@ -311,8 +315,7 @@ def map(app, window_mapping, mapping_status, label_loading, progress_bar, frame_
                     if not image and rename:
                         data = dict()
                         data["clip_name"] = clipname
-                        data = json.dumps(data)
-                        res = FlowMetadata.updateMetadata(metadata_id, data)
+                        res = FlowMetadata.updateMetadata(metadata_id, json.dumps(data))
                         if res != "OK":
                             error = r["details"]
                             messagebox.showerror("Error 403", f"Renaming failed: {error}")
@@ -332,7 +335,7 @@ def map(app, window_mapping, mapping_status, label_loading, progress_bar, frame_
                     else:
                         mappedData += t.get_string(border=1)
                         mappedData += f"\nEditShare response: {r}\n\nTransmitted JSON\n-----------------\n"
-                        mappedData += transmitted_json
+                        mappedData += json.dumps(transmitted_json, indent=4)
                         listbox_results.insert(id_listitem, f"{id}")
                         listbox_results.itemconfig(id_listitem, foreground="green")
                         databuffer[id_listitem] = mappedData
@@ -342,7 +345,7 @@ def map(app, window_mapping, mapping_status, label_loading, progress_bar, frame_
     except Exception as e:
         error_msg = traceback.format_exc()
         print(error_msg)
-    #print(mapped_assets)
+    print(mapped_assets)
     for asset in mappings.keys():
         if asset not in mapped_assets:
             skipped_assets.append(asset)
